@@ -2,6 +2,15 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+// For serverless environments like Netlify
+const getBaseUrl = () => {
+  // Priority: NEXTAUTH_URL env var, then VERCEL_URL, then default
+  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (process.env.NETLIFY_URL) return `https://${process.env.NETLIFY_URL}`;
+  return "http://localhost:3000";
+};
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -80,11 +89,22 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async redirect({ url, baseUrl }) {
+      const siteBaseUrl = getBaseUrl();
+      console.log("Redirect callback - URL:", url, "baseUrl:", baseUrl, "siteBaseUrl:", siteBaseUrl);
+      
       // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
+      if (url.startsWith("/")) return `${siteBaseUrl}${url}`;
+      
+      // Allows callback URLs on the same origin or configured origin
+      try {
+        const callbackUrl = new URL(url);
+        const configuredUrl = new URL(siteBaseUrl);
+        if (callbackUrl.origin === configuredUrl.origin) return url;
+      } catch (e) {
+        console.log("Error parsing URL:", e);
+      }
+      
+      return siteBaseUrl;
     },
   },
   pages: {
@@ -96,7 +116,19 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || "aurnik-secret-key-for-development",
-  debug: true, // Enable debug for troubleshooting
+  debug: process.env.NODE_ENV === "development",
+  // Use secure cookies in production
+  cookies: process.env.NODE_ENV === "production" ? {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+  } : undefined,
 };
 
 const handler = NextAuth(authOptions);

@@ -9,6 +9,17 @@
   NODE_VERSION = "20"
   BUN_VERSION = "latest"
 
+# NextAuth API routes - ensure they work properly
+[[redirects]]
+  from = "/api/auth/*"
+  to = "/.netlify/functions/nextjs_api/auth/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/nextjs_api/:splat"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
