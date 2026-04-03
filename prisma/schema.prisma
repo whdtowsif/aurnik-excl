@@ -1,0 +1,207 @@
+// Aurnik - Premium Handmade Fashion & Organic Boutique
+// Prisma Schema for Luxury E-commerce
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  image         String?
+  role          String   @default("member") // member, admin
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+  reviews       Review[]
+}
+
+// Product model for dresses and organic items
+model Product {
+  id               String    @id @default(cuid())
+  name             String
+  basePrice        Float
+  costPrice        Float     @default(0) // Cost for profit calculation
+  description      String
+  category         String    // "Clothing" or "Organic"
+  arModelUrl       String?
+  arEnabled        Boolean   @default(false) // AR try-on available
+  arModelFile      String?   // 3D model file path (GLB/USDZ)
+  isLimited        Boolean   @default(false)
+  totalAllocation  Int       @default(0)
+  remainingStock   Int       @default(0)
+  imageUrl         String?
+  images           String?   // JSON array of additional image URLs
+  fabricOptions    String?   // JSON array of available fabric IDs
+  featured         Boolean   @default(false)
+  facebookPostId   String?   // Facebook post ID after sync
+  facebookSynced   Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  orders           Order[]
+  reviews          Review[]
+}
+
+// Material/Fabric model
+model Material {
+  id             String   @id @default(cuid())
+  materialName   String
+  origin         String
+  qualityGrade   String   // "Premium", "Heritage", "Organic"
+  textureMap     String?
+  surcharge      Float    @default(0)
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Order model with progress tracking
+model Order {
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  userId        String
+  productId     String
+  materialId    String?
+  status        String    @default("Pending") // Pending, Artisan_Assigned, In_Progress, Shipped, Delivered
+  startDate     DateTime?
+  targetDate    DateTime?
+  artisanNotes  String?
+  isPaused      Boolean   @default(false)
+  totalPrice    Float
+  costPrice     Float     @default(0) // For profit calculation
+  customerEmail String?
+  customerName  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id])
+  product       Product   @relation(fields: [productId], references: [id])
+}
+
+// Review model
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  userId      String?
+  authorName  String
+  content     String
+  rating      Int      @default(5)
+  source      String   @default("instagram") // instagram, direct, verified
+  isPinned    Boolean  @default(false)
+  isApproved  Boolean  @default(false)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
+}
+
+// Chat session for AI concierge
+model ChatSession {
+  id          String   @id @default(cuid())
+  userId      String?
+  messages    String   // JSON array of messages
+  context     String?  // Current product context
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Offer/Discount for AI-generated offers
+model Offer {
+  id          String   @id @default(cuid())
+  userId      String
+  productId   String
+  offerType   String   // bundle, discount, exclusive
+  discount    Float
+  expiresAt   DateTime
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Facebook Integration Settings
+model FacebookSettings {
+  id              String   @id @default(cuid())
+  pageId          String?
+  pageName        String?
+  accessToken     String?
+  isConnected     Boolean  @default(false)
+  lastSync        DateTime?
+  autoSync        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Analytics for profit tracking
+model DailyAnalytics {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  revenue       Float    @default(0)
+  costs         Float    @default(0)
+  profit        Float    @default(0)
+  ordersCount   Int      @default(0)
+  visitors      Int      @default(0)
+  conversions   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Subscriber model for newsletter/membership
+model Subscriber {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  phone         String?
+  isVerified    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  source        String   @default("website") // website, google, referral
+  preferences   String?  // JSON for email preferences
+  subscribedAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Account for NextAuth
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+}
+
+// Session for NextAuth
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// VerificationToken for NextAuth
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+}
