@@ -140,6 +140,8 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
     imageUrl: "",
   });
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Facebook state
@@ -285,6 +287,12 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
   };
 
   const handleSaveProduct = async () => {
+    if (!productForm.name.trim()) {
+      toast.error("Product name is required");
+      return;
+    }
+    
+    setIsSavingProduct(true);
     try {
       const productData = {
         name: productForm.name,
@@ -293,7 +301,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         description: productForm.description,
         category: productForm.category,
         isLimited: productForm.isLimited,
-        totalAllocation: parseInt(productForm.totalAllocation) || 0,
+        totalAllocation: parseInt(productForm.totalAllocation) || parseInt(productForm.remainingStock) || 0,
         remainingStock: parseInt(productForm.remainingStock) || 0,
         arEnabled: productForm.arEnabled,
         featured: productForm.featured,
@@ -309,7 +317,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         });
         if (res.ok) {
           toast.success("Product updated successfully");
-          fetchProducts();
+          await fetchProducts();
         } else {
           toast.error("Failed to update product");
         }
@@ -321,9 +329,11 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
           body: JSON.stringify(productData),
         });
         if (res.ok) {
+          const newProduct = await res.json();
           toast.success("Product created successfully");
-          fetchProducts();
-          fetchStats();
+          setUploadedImage(null);
+          await fetchProducts();
+          await fetchStats();
         } else {
           toast.error("Failed to create product");
         }
@@ -332,6 +342,8 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
     } catch (error) {
       console.error("Save error:", error);
       toast.error("Failed to save product");
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -359,6 +371,21 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file size (max 2MB for better performance)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image too large. Max 2MB allowed.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    
+    // Create local preview immediately
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadedImage(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", "product");
@@ -378,6 +405,8 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       }
     } catch (error) {
       toast.error("Upload failed");
+    } finally {
+      setIsUploadingImage(false);
     }
   }, []);
 
@@ -1332,10 +1361,15 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                   <div>
                     <Label className="text-white/70 mb-2 block">Product Image</Label>
                     <div
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => !isUploadingImage && fileInputRef.current?.click()}
                       className="aspect-video rounded-xl border-2 border-dashed border-white/20 hover:border-gold-500/50 transition-colors cursor-pointer overflow-hidden relative"
                     >
-                      {uploadedImage ? (
+                      {isUploadingImage ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-white/60 bg-white/5">
+                          <RefreshCw className="h-8 w-8 mb-2 animate-spin" />
+                          <span className="text-sm">Uploading...</span>
+                        </div>
+                      ) : uploadedImage ? (
                         <img
                           src={uploadedImage}
                           alt="Product preview"
@@ -1345,6 +1379,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                         <div className="w-full h-full flex flex-col items-center justify-center text-white/40">
                           <Upload className="h-8 w-8 mb-2" />
                           <span className="text-sm">Click to upload image</span>
+                          <span className="text-xs mt-1">Max 2MB</span>
                         </div>
                       )}
                     </div>
@@ -1480,16 +1515,27 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                     <Button
                       variant="outline"
                       onClick={() => setIsProductModalOpen(false)}
+                      disabled={isSavingProduct}
                       className="flex-1 border-white/20 text-white hover:bg-white/5"
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={handleSaveProduct}
-                      className="flex-1 bg-gold-500 hover:bg-gold-600 text-black"
+                      disabled={isSavingProduct || isUploadingImage}
+                      className="flex-1 bg-gold-500 hover:bg-gold-600 text-black disabled:opacity-50"
                     >
-                      <Save className="h-4 w-4 mr-2" />
-                      {editingProduct ? "Update Product" : "Create Product"}
+                      {isSavingProduct ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          {editingProduct ? "Update Product" : "Create Product"}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
