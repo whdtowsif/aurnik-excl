@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
 
 // Aurnik Concierge System Prompt
@@ -27,9 +28,6 @@ Never offer generic discounts. Only mention "Curated Offers" if the system flags
 
 Keep responses concise and elegant. Maximum 3-4 sentences unless explaining complex details.`;
 
-// Store conversation history (in production, use a database)
-const conversationHistory = new Map<string, Array<{ role: string; content: string }>>();
-
 let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
 
 async function getZAI() {
@@ -42,7 +40,7 @@ async function getZAI() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, sessionId } = body;
+    const { message, sessionId, userId } = body;
 
     if (!message) {
       return NextResponse.json(
@@ -53,10 +51,28 @@ export async function POST(request: NextRequest) {
 
     const zai = await getZAI();
 
-    // Get or create conversation history
-    const history = conversationHistory.get(sessionId || "default") || [
-      { role: "assistant", content: AURNIK_SYSTEM_PROMPT },
-    ];
+    // Get or create chat session from database
+    let chatSession = null;
+    let history: Array<{ role: string; content: string }> = [];
+
+    if (sessionId) {
+      try {
+        chatSession = await db.chatSession.findUnique({
+          where: { id: sessionId },
+        });
+        
+        if (chatSession) {
+          history = JSON.parse(chatSession.messages);
+        }
+      } catch (error) {
+        console.error("Error fetching chat session:", error);
+      }
+    }
+
+    // If no history, start with system prompt
+    if (history.length === 0) {
+      history = [{ role: "assistant", content: AURNIK_SYSTEM_PROMPT }];
+    }
 
     // Add user message to history
     history.push({ role: "user", content: message });
@@ -83,9 +99,37 @@ export async function POST(request: NextRequest) {
 
     // Add AI response to history
     history.push({ role: "assistant", content: aiResponse });
-    conversationHistory.set(sessionId || "default", history);
 
-    return NextResponse.json({ response: aiResponse });
+    // Save to database
+    try {
+      if (chatSession) {
+        // Update existing session
+        await db.chatSession.update({
+          where: { id: sessionId },
+          data: {
+            messages: JSON.stringify(history),
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        // Create new session
+        chatSession = await db.chatSession.create({
+          data: {
+            id: sessionId || undefined,
+            userId: userId || null,
+            messages: JSON.stringify(history),
+          },
+        });
+      }
+    } catch (dbError) {
+      console.error("Error saving chat session:", dbError);
+      // Continue even if save fails - return response anyway
+    }
+
+    return NextResponse.json({ 
+      response: aiResponse,
+      sessionId: chatSession?.id || sessionId,
+    });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
@@ -100,7 +144,13 @@ export async function DELETE(request: NextRequest) {
   const sessionId = searchParams.get("sessionId");
   
   if (sessionId) {
-    conversationHistory.delete(sessionId);
+    try {
+      await db.chatSession.delete({
+        where: { id: sessionId },
+      });
+    } catch (error) {
+      console.error("Error deleting chat session:", error);
+    }
   }
   
   return NextResponse.json({ success: true });

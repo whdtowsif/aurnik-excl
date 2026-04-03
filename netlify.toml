@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "bun run build"
   publish = ".next"
 
 [[plugins]]
@@ -7,7 +7,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  NPM_FLAGS = "--legacy-peer-deps"
+  BUN_VERSION = "latest"
 
 [[headers]]
   for = "/*"

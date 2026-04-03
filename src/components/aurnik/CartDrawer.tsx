@@ -13,11 +13,13 @@ import {
   Sparkles,
   Clock,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 export default function CartDrawer() {
   const {
@@ -33,6 +35,9 @@ export default function CartDrawer() {
     getDiscount,
     getTotal,
   } = useCartStore();
+  
+  const { data: session } = useSession();
+  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-BD", {
@@ -42,12 +47,51 @@ export default function CartDrawer() {
     }).format(price);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) {
       toast.error("Your cart is empty");
       return;
     }
-    toast.success("Proceeding to secure checkout...");
+
+    if (!session?.user?.email) {
+      toast.error("Please login to checkout");
+      setOpen(false);
+      return;
+    }
+
+    setIsCheckingOut(true);
+
+    try {
+      // Create orders for each cart item
+      const orderPromises = items.map((item) =>
+        fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: session.user.email,
+            productId: item.productId,
+            materialId: item.materialId,
+            totalPrice: item.totalPrice,
+          }),
+        })
+      );
+
+      const results = await Promise.all(orderPromises);
+      const failedOrders = results.filter((r) => !r.ok);
+
+      if (failedOrders.length > 0) {
+        throw new Error("Some orders failed to create");
+      }
+
+      toast.success(`Order placed successfully! ${items.length} item(s) will be prepared by our artisans.`);
+      clearCart();
+      setOpen(false);
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Failed to process order. Please try again.");
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   return (
@@ -244,6 +288,15 @@ export default function CartDrawer() {
                   </span>
                 </div>
 
+                {/* Login notice if not authenticated */}
+                {!session?.user && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-xs text-amber-400 text-center">
+                      Please login to proceed with checkout
+                    </p>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="flex flex-col items-center">
@@ -261,13 +314,23 @@ export default function CartDrawer() {
                   <div className="flex flex-col items-center">
                     <Button 
                       onClick={handleCheckout}
-                      className="w-full bg-gold-500 hover:bg-gold-600 text-black"
+                      disabled={isCheckingOut || !session?.user}
+                      className="w-full bg-gold-500 hover:bg-gold-600 text-black disabled:opacity-50"
                     >
-                      Checkout
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      {isCheckingOut ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Checkout
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                     <span className="mt-1 text-[9px] text-white/30">
-                      Secure payment via SSLCommerz
+                      {session?.user ? "Secure order placement" : "Login required"}
                     </span>
                   </div>
                 </div>
@@ -275,7 +338,7 @@ export default function CartDrawer() {
                 <div className="flex items-center justify-center gap-2 pt-2">
                   <Shield className="h-3 w-3 text-white/30" />
                   <p className="text-xs text-center text-white/30">
-                    Secure checkout with SSLCommerz
+                    Secure checkout • 14-day artisanal process
                   </p>
                 </div>
               </div>

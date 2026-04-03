@@ -4,11 +4,11 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Simple Prisma client that uses Turso HTTP at runtime
-// During build time, it falls back to a mock client
+// Development: Use local SQLite
+// Production: Turso via DATABASE_URL environment variable set in Netlify
 function createPrismaClient() {
   return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   })
 }
 

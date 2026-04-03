@@ -384,12 +384,22 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
   // Order management
   const toggleOrderPause = async (orderId: string, currentStatus: boolean) => {
     try {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.orderId === orderId ? { ...o, isPaused: !currentStatus } : o
-        )
-      );
-      toast.success(`Order ${currentStatus ? "resumed" : "paused"} successfully`);
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPaused: !currentStatus }),
+      });
+
+      if (res.ok) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.orderId === orderId ? { ...o, isPaused: !currentStatus } : o
+          )
+        );
+        toast.success(`Order ${currentStatus ? "resumed" : "paused"} successfully`);
+      } else {
+        throw new Error("Failed to update");
+      }
     } catch (error) {
       toast.error("Failed to update order status");
     }
@@ -397,12 +407,22 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.orderId === orderId ? { ...o, status: newStatus } : o
-        )
-      );
-      toast.success("Order status updated");
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.orderId === orderId ? { ...o, status: newStatus } : o
+          )
+        );
+        toast.success("Order status updated");
+      } else {
+        throw new Error("Failed to update");
+      }
     } catch (error) {
       toast.error("Failed to update order status");
     }
@@ -411,12 +431,22 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
   // Review management
   const toggleReviewPin = async (reviewId: string, currentStatus: boolean) => {
     try {
-      setReviews((prev) =>
-        prev.map((r) =>
-          r.id === reviewId ? { ...r, isPinned: !currentStatus } : r
-        )
-      );
-      toast.success(`Review ${currentStatus ? "unpinned" : "pinned"}`);
+      const res = await fetch(`/api/reviews/${reviewId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPinned: !currentStatus }),
+      });
+
+      if (res.ok) {
+        setReviews((prev) =>
+          prev.map((r) =>
+            r.id === reviewId ? { ...r, isPinned: !currentStatus } : r
+          )
+        );
+        toast.success(`Review ${currentStatus ? "unpinned" : "pinned"}`);
+      } else {
+        throw new Error("Failed to update");
+      }
     } catch (error) {
       toast.error("Failed to update review");
     }
