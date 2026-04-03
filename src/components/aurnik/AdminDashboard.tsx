@@ -158,6 +158,24 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
     }
   }, [isOpen]);
 
+  // Helper function for fetch with retry
+  const fetchWithRetry = async (url: string, retries = 3): Promise<Response | null> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const res = await fetch(url);
+        return res;
+      } catch (error) {
+        if (i === retries - 1) {
+          console.error(`Fetch failed after ${retries} attempts for ${url}:`, error);
+          return null;
+        }
+        // Wait before retry
+        await new Promise((resolve) => setTimeout(resolve, 500 * (i + 1)));
+      }
+    }
+    return null;
+  };
+
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
@@ -168,6 +186,9 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         fetchStats(),
         fetchFacebookSettings(),
       ]);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast.error("Failed to load some data. Please try refreshing.");
     } finally {
       setIsLoading(false);
     }
@@ -175,48 +196,57 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("/api/products");
-      if (res.ok) {
+      const res = await fetchWithRetry("/api/products");
+      if (res && res.ok) {
         const data = await res.json();
         setProducts(data);
+      } else {
+        setProducts([]);
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
+      setProducts([]);
     }
   };
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch("/api/orders?userId=all");
-      if (res.ok) {
+      const res = await fetchWithRetry("/api/orders?userId=all");
+      if (res && res.ok) {
         const data = await res.json();
         setOrders(data);
+      } else {
+        setOrders([]);
       }
     } catch (error) {
       console.error("Failed to fetch orders:", error);
+      setOrders([]);
     }
   };
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch("/api/reviews");
-      if (res.ok) {
+      const res = await fetchWithRetry("/api/reviews");
+      if (res && res.ok) {
         const data = await res.json();
         setReviews(data);
+      } else {
+        setReviews([]);
       }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
+      setReviews([]);
     }
   };
 
   const fetchStats = async () => {
     try {
       const [productsRes, ordersRes] = await Promise.all([
-        fetch("/api/products"),
-        fetch("/api/orders?userId=all"),
+        fetchWithRetry("/api/products"),
+        fetchWithRetry("/api/orders?userId=all"),
       ]);
       
-      if (productsRes.ok && ordersRes.ok) {
+      if (productsRes && ordersRes && productsRes.ok && ordersRes.ok) {
         const productsData = await productsRes.json();
         const ordersData = await ordersRes.json();
         
