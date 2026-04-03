@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -197,16 +198,26 @@ function ProductDetailContent({
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Image/AR Section */}
           <div className="relative aspect-square lg:aspect-auto lg:h-[90vh] bg-gradient-to-br from-white/10 via-white/5 to-transparent">
-            {/* Product Image Placeholder */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
-                  <Sparkles className="h-12 w-12 text-gold-400/50" />
+            {/* Product Image */}
+            {product.imageUrl ? (
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
+                    <Sparkles className="h-12 w-12 text-gold-400/50" />
+                  </div>
+                  <span className="text-white/30">Preview Coming Soon</span>
+                  <p className="text-xs text-white/20 mt-1">{product.name}</p>
                 </div>
-                <span className="text-white/30">Preview Coming Soon</span>
-                <p className="text-xs text-white/20 mt-1">{product.name}</p>
               </div>
-            </div>
+            )}
 
             {/* AR Button - Available for ALL clothing products */}
             {isClothingProduct && (

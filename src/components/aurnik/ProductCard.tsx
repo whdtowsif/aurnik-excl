@@ -7,6 +7,7 @@ import { Eye, ShoppingBag, Sparkles, Heart, ExternalLink, Share2 } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useCartStore } from "@/lib/store";
 
 interface Product {
   id: string;
@@ -24,12 +25,17 @@ interface Product {
 interface ProductCardProps {
   product: Product;
   index?: number;
+  onViewDetails?: () => void;
+  onARTryOn?: () => void;
 }
 
-export default function ProductCard({ product, index = 0 }: ProductCardProps) {
+export default function ProductCard({ product, index = 0, onViewDetails, onARTryOn }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+
+  const { addItem, setOpen: setCartOpen } = useCartStore();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-BD", {
@@ -42,7 +48,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const showScarcity = product.isLimited && product.remainingStock <= 5;
   const isClothingProduct = product.category === "Clothing";
 
-  const handleShare = () => {
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (navigator.share) {
       navigator.share({
         title: product.name,
@@ -52,6 +59,45 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success("Link copied to clipboard!");
+    }
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewDetails?.();
+  };
+
+  const handleARTryOn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onARTryOn?.();
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAddingToCart(true);
+    
+    try {
+      addItem({
+        productId: product.id,
+        productName: product.name,
+        productImage: product.imageUrl || undefined,
+        basePrice: product.basePrice,
+        materialId: undefined,
+        materialName: undefined,
+        surcharge: 0,
+        quantity: 1,
+        totalPrice: product.basePrice,
+      });
+      
+      toast.success(`Added ${product.name} to cart!`);
+      
+      setTimeout(() => {
+        setCartOpen(true);
+      }, 500);
+    } catch (error) {
+      toast.error("Failed to add to cart");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
@@ -123,6 +169,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             >
               <Button
                 size="sm"
+                onClick={handleViewDetails}
                 className="w-full bg-gold-500 hover:bg-gold-600 text-black text-xs uppercase tracking-wider shadow-lg shadow-gold-500/20"
               >
                 <Eye className="h-4 w-4 mr-2" />
@@ -144,6 +191,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                   <Button
                     size="sm"
                     variant="secondary"
+                    onClick={handleARTryOn}
                     className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:border-gold-500/30 text-xs"
                     title="Try on in AR using your phone camera"
                   >
@@ -159,11 +207,13 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:border-gold-500/30 text-xs"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:border-gold-500/30 text-xs disabled:opacity-50"
                   title="Add this piece to your collection"
                 >
                   <ShoppingBag className="h-3 w-3 mr-1" />
-                  Add to Cart
+                  {isAddingToCart ? "Adding..." : "Add to Cart"}
                 </Button>
                 <span className="mt-1 text-[9px] text-white/30 text-center">
                   Reserve your piece

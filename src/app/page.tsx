@@ -266,13 +266,13 @@ export default function AurnikHomePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {clothingProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  onClick={() => handleProductClick(product)}
-                  className="cursor-pointer"
-                >
-                  <ProductCard product={product} index={index} />
-                </div>
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  index={index}
+                  onViewDetails={() => handleProductClick(product)}
+                  onARTryOn={() => handleProductClick(product)}
+                />
               ))}
             </div>
           </div>
@@ -301,13 +301,12 @@ export default function AurnikHomePage() {
             {organicProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {organicProducts.map((product, index) => (
-                  <div
-                    key={product.id}
-                    onClick={() => handleProductClick(product)}
-                    className="cursor-pointer"
-                  >
-                    <ProductCard product={product} index={index} />
-                  </div>
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    index={index}
+                    onViewDetails={() => handleProductClick(product)}
+                  />
                 ))}
               </div>
             ) : (
