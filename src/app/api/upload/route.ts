@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const type = formData.get("type") as string || "general";
+    const type = (formData.get("type") as string) || "general";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -22,46 +19,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (max 5MB for base64 storage)
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 10MB." },
+        { error: "File too large. Maximum size is 5MB." },
         { status: 400 }
       );
     }
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), "public", "uploads", type);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const extension = file.name.split(".").pop() || "jpg";
-    const filename = `${timestamp}-${randomString}.${extension}`;
-    const filepath = path.join(uploadDir, filename);
-
-    // Convert file to buffer and save
+    // Convert to base64 data URL for serverless storage
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const base64 = buffer.toString("base64");
+    const dataUrl = `data:${file.type};base64,${base64}`;
 
-    // Return public URL
-    const publicUrl = `/uploads/${type}/${filename}`;
+    // Generate a unique identifier for the image
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const imageId = `${type}/${timestamp}-${randomString}`;
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      filename,
+      url: dataUrl,
+      imageId,
       size: file.size,
       type: file.type,
+      message: "Image converted to base64. For production, use cloud storage like Cloudinary or AWS S3.",
     });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload file" },
+      { error: "Failed to process file" },
       { status: 500 }
     );
   }
