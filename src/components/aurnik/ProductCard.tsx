@@ -256,7 +256,7 @@ export default function ProductCard({ product, index = 0, onViewDetails, onARTry
             transition={{ delay: 0.15 }}
             onClick={(e) => {
               e.stopPropagation();
-              handleShare();
+              handleShare(e);
             }}
             className="absolute top-4 right-16 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-black/50 transition-colors"
             title="Share product"

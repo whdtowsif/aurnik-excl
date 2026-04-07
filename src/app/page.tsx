@@ -61,11 +61,13 @@ interface Review {
 
 interface OrderProgress {
   orderId: string;
-  percent: number;
-  stage: string;
-  isPaused: boolean;
+  productId: string;
   productName?: string;
+  status: string;
+  progress: number;
+  stage: string;
   artisanNotes?: string;
+  isPaused: boolean;
 }
 
 export default function AurnikHomePage() {
@@ -145,10 +147,26 @@ export default function AurnikHomePage() {
         if (res.ok) {
           const ordersData = await res.json();
           
-          const progressPromises = ordersData.map(async (order: { orderId: string; product: { name: string }; artisanNotes?: string }) => {
+          const progressPromises = ordersData.map(async (order: { 
+            orderId: string; 
+            productId: string;
+            product?: { name: string }; 
+            status: string;
+            artisanNotes?: string;
+          }) => {
             const progressRes = await fetch(`/api/progress?orderId=${order.orderId}`);
             if (progressRes.ok) {
-              return progressRes.json();
+              const progressData = await progressRes.json();
+              return {
+                orderId: order.orderId,
+                productId: order.productId,
+                productName: order.product?.name,
+                status: order.status,
+                progress: progressData.percent || progressData.progress || 0,
+                stage: progressData.stage || "Processing",
+                artisanNotes: order.artisanNotes || progressData.artisanNotes,
+                isPaused: progressData.isPaused || false,
+              };
             }
             return null;
           });

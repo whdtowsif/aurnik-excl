@@ -59,6 +59,7 @@ export default function CartDrawer() {
       return;
     }
 
+    const userEmail = session.user.email;
     setIsCheckingOut(true);
 
     try {
@@ -68,7 +69,7 @@ export default function CartDrawer() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId: session.user.email,
+            userId: userEmail,
             productId: item.productId,
             materialId: item.materialId,
             totalPrice: item.totalPrice,

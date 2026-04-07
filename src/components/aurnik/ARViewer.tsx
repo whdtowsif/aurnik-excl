@@ -601,21 +601,13 @@ export default function ARViewer({
             <div className="inline-flex rounded-full bg-white/10 p-1">
               <button
                 onClick={() => handleModeChange("camera")}
-                className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors ${
-                  arMode === "camera"
-                    ? "bg-gold-500 text-black"
-                    : "text-white/60 hover:text-white"
-                }`}
+                className="px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors bg-gold-500 text-black"
               >
                 Camera
               </button>
               <button
                 onClick={() => handleModeChange("model")}
-                className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors ${
-                  arMode === "model"
-                    ? "bg-gold-500 text-black"
-                    : "text-white/60 hover:text-white"
-                }`}
+                className="px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors text-white/60 hover:text-white"
               >
                 3D Model
               </button>
@@ -635,21 +627,13 @@ export default function ARViewer({
             <div className="inline-flex rounded-full bg-white/10 p-1">
               <button
                 onClick={() => handleModeChange("camera")}
-                className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors ${
-                  arMode === "camera"
-                    ? "bg-gold-500 text-black"
-                    : "text-white/60 hover:text-white"
-                }`}
+                className="px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors text-white/60 hover:text-white"
               >
                 Camera
               </button>
               <button
                 onClick={() => handleModeChange("model")}
-                className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors ${
-                  arMode === "model"
-                    ? "bg-gold-500 text-black"
-                    : "text-white/60 hover:text-white"
-                }`}
+                className="px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-colors bg-gold-500 text-black"
               >
                 3D Model
               </button>

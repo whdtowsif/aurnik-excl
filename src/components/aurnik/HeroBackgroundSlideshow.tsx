@@ -28,7 +28,7 @@ export default function HeroBackgroundSlideshow({
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <AnimatePresence mode="crossfade">
+      <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
           initial={{ opacity: 0, scale: 1.1 }}
