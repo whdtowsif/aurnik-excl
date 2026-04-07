@@ -91,17 +91,17 @@ export default function HeroBackgroundSlideshow({
         }}
       />
 
-      {/* Image indicators */}
+      {/* Minimal image indicators - thin and subtle */}
       {images.length > 1 && (
-        <div className="absolute bottom-32 sm:bottom-36 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 opacity-40 hover:opacity-70 transition-opacity">
           {images.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
-              className={`w-8 h-1 rounded-full transition-all duration-500 ${
+              className={`h-0.5 rounded-full transition-all duration-500 ${
                 index === currentIndex 
-                  ? "bg-gold-400 w-12" 
-                  : "bg-white/30 hover:bg-white/50"
+                  ? "bg-gold-400/80 w-4" 
+                  : "bg-white/40 w-2 hover:bg-white/60"
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />
