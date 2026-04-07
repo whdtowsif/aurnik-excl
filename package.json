@@ -94,6 +94,7 @@
     "typescript": "^5"
   },
   "overrides": {
+    "intersection-observer": "npm:empty-npm-package@1.0.0",
     "node-domexception": "npm:empty-npm-package@1.0.0"
   }
 }
