@@ -15,6 +15,8 @@ import {
   Loader2,
   CameraOff,
   RefreshCw,
+  Eye,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -31,12 +33,14 @@ export default function ARViewer({
   isOpen,
   onClose,
   productName,
+  productImage,
   modelUrl,
 }: ARViewerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [arMode, setArMode] = useState<"camera" | "model">("camera");
+  const [previewMode, setPreviewMode] = useState(false); // For iframe environments
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -70,18 +74,24 @@ export default function ARViewer({
       // Handle different error types gracefully
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         setPermissionDenied(true);
-        // Don't show toast on first dismissal, only on explicit denial
-        if (hasAttemptedCamera.current) {
+        // Offer preview mode instead of just showing error
+        if (!hasAttemptedCamera.current) {
+          toast.info("Camera access denied. Preview mode available.");
+        } else {
           toast.error("Camera permission denied. Please enable it in your browser settings.");
         }
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        toast.error("No camera found on this device.");
+        toast.error("No camera found. Preview mode available.");
         setPermissionDenied(true);
       } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-        toast.error("Camera is in use by another application.");
+        toast.error("Camera is in use. Preview mode available.");
+        setPermissionDenied(true);
+      } else if (err.name === "NotSupportedError") {
+        // Camera not supported (e.g., in iframe without proper permissions)
+        toast.info("Camera not available in this environment. Preview mode available.");
         setPermissionDenied(true);
       } else {
-        // Silently handle other errors without console spam
+        // Silently handle other errors and offer preview mode
         setPermissionDenied(true);
       }
       hasAttemptedCamera.current = true;
@@ -123,39 +133,66 @@ export default function ARViewer({
     
     const ctx = canvas.getContext("2d");
     if (ctx) {
+      // Draw camera feed
       ctx.drawImage(video, 0, 0);
       
-      const overlaySize = 200 * zoom;
-      const x = (canvas.width - overlaySize) / 2;
-      const y = (canvas.height - overlaySize) / 2;
-      
-      ctx.save();
-      ctx.translate(x + overlaySize / 2, y + overlaySize / 2);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.globalAlpha = 0.8;
-      
-      ctx.strokeStyle = "#C5A059";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(0, -overlaySize / 2);
-      ctx.lineTo(overlaySize / 3, -overlaySize / 4);
-      ctx.lineTo(overlaySize / 3, overlaySize / 3);
-      ctx.lineTo(0, overlaySize / 2);
-      ctx.lineTo(-overlaySize / 3, overlaySize / 3);
-      ctx.lineTo(-overlaySize / 3, -overlaySize / 4);
-      ctx.closePath();
-      ctx.stroke();
-      
-      ctx.restore();
-      
-      const link = document.createElement("a");
-      link.download = `${productName.replace(/\s+/g, "-").toLowerCase()}-ar-preview.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      
-      toast.success("AR preview saved!");
+      // Draw product image overlay
+      if (productImage) {
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const overlayWidth = 200 * zoom;
+          const overlayHeight = (img.height / img.width) * overlayWidth;
+          const x = (canvas.width - overlayWidth) / 2;
+          const y = (canvas.height - overlayHeight) / 2;
+          
+          ctx.save();
+          ctx.translate(x + overlayWidth / 2, y + overlayHeight / 2);
+          ctx.rotate((rotation * Math.PI) / 180);
+          ctx.globalAlpha = 0.8;
+          ctx.drawImage(img, -overlayWidth / 2, -overlayHeight / 2, overlayWidth, overlayHeight);
+          ctx.restore();
+          
+          downloadCanvas(canvas, productName);
+        };
+        img.src = productImage;
+      } else {
+        // Draw SVG dress outline as fallback
+        const overlaySize = 200 * zoom;
+        const x = (canvas.width - overlaySize) / 2;
+        const y = (canvas.height - overlaySize) / 2;
+        
+        ctx.save();
+        ctx.translate(x + overlaySize / 2, y + overlaySize / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.globalAlpha = 0.8;
+        
+        ctx.strokeStyle = "#C5A059";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, -overlaySize / 2);
+        ctx.lineTo(overlaySize / 3, -overlaySize / 4);
+        ctx.lineTo(overlaySize / 3, overlaySize / 3);
+        ctx.lineTo(0, overlaySize / 2);
+        ctx.lineTo(-overlaySize / 3, overlaySize / 3);
+        ctx.lineTo(-overlaySize / 3, -overlaySize / 4);
+        ctx.closePath();
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        downloadCanvas(canvas, productName);
+      }
     }
-  }, [productName, zoom, rotation]);
+  }, [productName, zoom, rotation, productImage]);
+
+  const downloadCanvas = (canvas: HTMLCanvasElement, name: string) => {
+    const link = document.createElement("a");
+    link.download = `${name.replace(/\s+/g, "-").toLowerCase()}-ar-preview.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    toast.success("AR preview saved!");
+  };
 
   const handleShare = useCallback(async () => {
     if (!canvasRef.current) return;
@@ -253,7 +290,7 @@ export default function ARViewer({
               )}
               
               {/* Permission Denied State */}
-              {permissionDenied && !cameraActive && !isLoading && (
+              {permissionDenied && !cameraActive && !isLoading && !previewMode && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black">
                   <div className="text-center p-8 max-w-md">
                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
@@ -261,18 +298,27 @@ export default function ARViewer({
                     </div>
                     <h3 className="font-serif text-xl text-white mb-2">Camera Access Required</h3>
                     <p className="text-sm text-white/50 mb-6">
-                      To use the AR Try-On feature, please allow camera access in your browser settings and try again.
+                      To use the AR Try-On feature with your camera, please allow camera access. 
+                      Or use Preview Mode to see how the dress looks.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        onClick={() => setPreviewMode(true)}
+                        className="bg-gold-500 hover:bg-gold-600 text-black"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview Mode
+                      </Button>
                       <Button
                         onClick={() => {
                           hasAttemptedCamera.current = false;
                           startCamera();
                         }}
-                        className="bg-gold-500 hover:bg-gold-600 text-black"
+                        variant="outline"
+                        className="border-white/20 text-white hover:bg-white/5"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
-                        Try Again
+                        Try Camera
                       </Button>
                       <Button
                         onClick={openNativeAR}
@@ -280,9 +326,114 @@ export default function ARViewer({
                         className="border-white/20 text-white hover:bg-white/5"
                       >
                         <Smartphone className="h-4 w-4 mr-2" />
-                        Use Mobile AR
+                        Mobile AR
                       </Button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview Mode - Shows product image with simulated background */}
+              {previewMode && (
+                <div className="absolute inset-0 bg-gradient-to-b from-neutral-800 to-neutral-900 flex items-center justify-center">
+                  {/* Simulated mirror/environment background */}
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gold-500/10 via-transparent to-gold-500/10" />
+                  </div>
+                  
+                  {/* Product overlay */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: zoom }}
+                    transition={{ duration: 0.3 }}
+                    style={{ rotate: rotation }}
+                    className="relative"
+                  >
+                    {productImage ? (
+                      <img
+                        src={productImage}
+                        alt={productName}
+                        className="w-64 h-auto max-h-96 object-contain drop-shadow-2xl"
+                        style={{ filter: 'drop-shadow(0 0 30px rgba(197, 160, 89, 0.5))' }}
+                      />
+                    ) : (
+                      <div className="w-64 h-80 rounded-lg bg-gradient-to-b from-gold-500/30 to-gold-600/20 border-2 border-gold-500/50 border-dashed flex items-center justify-center">
+                        <div className="text-center p-4">
+                          <Sparkles className="h-12 w-12 mx-auto mb-2 text-gold-400/50" />
+                          <span className="text-sm text-white/50">Preview</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <span className="text-xs text-white/50 bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm">
+                        {productName} - Preview Mode
+                      </span>
+                    </div>
+                  </motion.div>
+
+                  {/* Preview Mode Controls */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setRotation(rotation - 15)}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setRotation(rotation + 15)}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <RotateCcw className="h-4 w-4 scale-x-[-1]" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-3">
+                      <Button
+                        onClick={() => {
+                          setPreviewMode(false);
+                          hasAttemptedCamera.current = false;
+                          startCamera();
+                        }}
+                        variant="outline"
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Use Camera
+                      </Button>
+                      <Button
+                        onClick={openNativeAR}
+                        variant="outline"
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <Smartphone className="h-4 w-4 mr-2" />
+                        Mobile AR
+                      </Button>
+                    </div>
+                    
+                    <p className="text-center text-[10px] text-white/30 mt-3">
+                      Preview mode shows the dress on a simulated background. Use camera or mobile for real AR.
+                    </p>
                   </div>
                 </div>
               )}
@@ -296,33 +447,47 @@ export default function ARViewer({
                     style={{ rotate: rotation }}
                     className="relative"
                   >
-                    <svg
-                      width="200"
-                      height="300"
-                      viewBox="0 0 200 300"
-                      className="drop-shadow-2xl"
-                    >
-                      <defs>
-                        <linearGradient id="dressGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#C5A059" stopOpacity="0.6" />
-                          <stop offset="100%" stopColor="#8B7355" stopOpacity="0.4" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M100 20 L140 40 L145 100 L130 150 L140 280 L100 290 L60 280 L70 150 L55 100 L60 40 Z"
-                        fill="url(#dressGradient)"
-                        stroke="#C5A059"
-                        strokeWidth="2"
-                        strokeDasharray="5,5"
-                        className="animate-pulse"
-                      />
-                      <path
-                        d="M100 10 L100 20 M80 30 Q100 10 120 30"
-                        fill="none"
-                        stroke="#C5A059"
-                        strokeWidth="2"
-                      />
-                    </svg>
+                    {productImage ? (
+                      /* Show actual product image */
+                      <div className="relative">
+                        <img
+                          src={productImage}
+                          alt={productName}
+                          className="w-48 h-auto max-h-80 object-contain opacity-80 drop-shadow-2xl"
+                          style={{ filter: 'drop-shadow(0 0 20px rgba(197, 160, 89, 0.4))' }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-gold-500/10 rounded-lg" />
+                      </div>
+                    ) : (
+                      /* Fallback SVG dress outline */
+                      <svg
+                        width="200"
+                        height="300"
+                        viewBox="0 0 200 300"
+                        className="drop-shadow-2xl"
+                      >
+                        <defs>
+                          <linearGradient id="dressGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#C5A059" stopOpacity="0.6" />
+                            <stop offset="100%" stopColor="#8B7355" stopOpacity="0.4" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M100 20 L140 40 L145 100 L130 150 L140 280 L100 290 L60 280 L70 150 L55 100 L60 40 Z"
+                          fill="url(#dressGradient)"
+                          stroke="#C5A059"
+                          strokeWidth="2"
+                          strokeDasharray="5,5"
+                          className="animate-pulse"
+                        />
+                        <path
+                          d="M100 10 L100 20 M80 30 Q100 10 120 30"
+                          fill="none"
+                          stroke="#C5A059"
+                          strokeWidth="2"
+                        />
+                      </svg>
+                    )}
                     <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
                       <span className="text-xs text-white/50 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
                         Position dress on your body
