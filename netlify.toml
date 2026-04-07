@@ -9,6 +9,10 @@
   NODE_VERSION = "20"
   BUN_VERSION = "latest"
 
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["prisma/**/*", "node_modules/.prisma/**/*", "node_modules/@prisma/client/**/*"]
+
 # API routes - ensure they work properly with Netlify Functions
 [[redirects]]
   from = "/api/auth/*"
