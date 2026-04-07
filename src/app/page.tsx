@@ -20,6 +20,7 @@ import CartDrawer from "@/components/aurnik/CartDrawer";
 import DynamicOffer from "@/components/aurnik/DynamicOffer";
 import AdminDashboard from "@/components/aurnik/AdminDashboard";
 import LoginModal from "@/components/aurnik/LoginModal";
+import ARTryOnModal from "@/components/aurnik/ARTryOnModal";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 
@@ -82,6 +83,8 @@ export default function AurnikHomePage() {
   const [viewedProducts, setViewedProducts] = useState<string[]>([]);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isARTryOnOpen, setIsARTryOnOpen] = useState(false);
+  const [arProduct, setARProduct] = useState<Product | null>(null);
 
   // Cart store
   const { getTotalItems } = useCartStore();
@@ -198,6 +201,12 @@ export default function AurnikHomePage() {
     });
   }, []);
 
+  // Handle AR Try-On
+  const handleARTryOn = useCallback((product: Product) => {
+    setARProduct(product);
+    setIsARTryOnOpen(true);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -271,7 +280,7 @@ export default function AurnikHomePage() {
                   product={product} 
                   index={index}
                   onViewDetails={() => handleProductClick(product)}
-                  onARTryOn={() => handleProductClick(product)}
+                  onARTryOn={() => handleARTryOn(product)}
                 />
               ))}
             </div>
@@ -407,6 +416,13 @@ export default function AurnikHomePage() {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
+      />
+
+      {/* AR Try-On Modal */}
+      <ARTryOnModal
+        isOpen={isARTryOnOpen}
+        onClose={() => setIsARTryOnOpen(false)}
+        product={arProduct}
       />
     </div>
   );
