@@ -1,39 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
+
+export const maxDuration = 30;
 
 // Aurnik Concierge System Prompt
-const AURNIK_SYSTEM_PROMPT = `You are the "Aurnik Concierge," the high-end digital ambassador for Aurnik, a premium Bangladeshi brand specializing in handmade limited-edition dresses and organic luxury goods. Your tone is sophisticated, minimalist, and deeply knowledgeable about artisanal craftsmanship.
+const AURNIK_SYSTEM_PROMPT = `You are the "Aurnik Concierge," the high-end digital ambassador for Aurnik, a premium Bangladeshi brand specializing in handmade limited-edition dresses and organic luxury goods.
 
-Core Knowledge & Context:
-* The Brand: Aurnik (pronounced Or-nik) stands for exclusivity. Every dress is a "Fixed Design" but allows for "High-Level Customization" (Color and Fabric type).
-* The Process: We do not believe in fast fashion. Every piece is handmade. If a customer asks about their order progress, explain that the "Artisanal Phase" (Hand-stitching and embroidery) is the most time-consuming part of the journey.
-* The AR Chamber: Customers can try on up to 4 finished designs using their mobile camera.
-* Organic Corner: We offer a curated selection of premium organic items.
-* Contact Protocol: For specific measurements or deep customizations, direct the user to the VIP WhatsApp Liaison at +8801744688077.
+Core Knowledge:
+- Brand: Aurnik (pronounced Or-nik) - exclusivity and handmade craftsmanship
+- Products: Handmade dresses with fabric/color customization, organic luxury goods
+- Process: Each piece takes 120+ hours of artisanal work
+- AR Try-On: Available for finished designs
+- Contact: WhatsApp at +8801744688077 for custom requests
 
 Response Guidelines:
-* Be Decisive: Do not use "maybe" or "perhaps." Use "We recommend" or "Our artisans suggest."
-* Focus on Fabrics: You are an expert in Jamdani, Silk, Premium Linens, and Organic Cotton.
-* Scarcity is Key: Remind customers that designs are limited pieces.
-* The "Human" Touch: Always refer to the "Tailors," "Artisans," and "Design Team" to maintain the brand's handmade identity.
+- Be sophisticated and helpful
+- Keep responses concise (2-3 sentences)
+- Mention fabrics: Jamdani, Silk, Linen, Organic Cotton
+- Remind about limited availability
+- For sizing/custom requests, direct to WhatsApp`;
 
-Handling Queries:
-* Size/Fit: "Our designs are tailored to standard premium silhouettes. For bespoke fit, contact our WhatsApp liaison."
-* Pricing: "Aurnik represents an investment in craftsmanship. The price reflects the hours of hand-work and the rarity of the textiles used."
-* Delivery: "Our standard lead time is 14 days for the artisanal process."
+// Fallback responses for when AI is unavailable
+const FALLBACK_RESPONSES: Record<string, string> = {
+  default: "I'd be happy to help! Our handmade dresses take 120+ hours of artisanal craftsmanship. For specific questions about sizing, fabrics, or custom orders, please contact our WhatsApp liaison at +8801744688077. Is there something specific I can help you with?",
+  fabric: "We work with premium Jamdani, Silk, Linen, and Organic Cotton. Each fabric has unique characteristics - Jamdani is our heritage weave, while our organic cottons are sustainably sourced. Would you like more details on any specific fabric?",
+  delivery: "Our standard delivery is 14 days for the artisanal process. Each piece is handcrafted after your order. For urgent requests, please contact our WhatsApp at +8801744688077.",
+  price: "Aurnik represents an investment in craftsmanship. Prices reflect the 120+ hours of hand-work and premium textiles. Each piece is a limited edition. Would you like to browse our collection?",
+  size: "Our designs follow premium standard sizing. For bespoke fit, contact our WhatsApp liaison at +8801744688077 with your measurements, and our artisans will ensure a perfect fit.",
+};
 
-Keep responses concise and elegant. Maximum 3-4 sentences unless explaining complex details.`;
-
-// In-memory conversation storage (resets on server restart, but works for serverless)
-const conversationHistory = new Map<string, Array<{ role: string; content: string }>>();
-
-let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
-
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create();
+function getFallbackResponse(message: string): string {
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('fabric') || lowerMessage.includes('jamdani') || lowerMessage.includes('silk')) {
+    return FALLBACK_RESPONSES.fabric;
   }
-  return zaiInstance;
+  if (lowerMessage.includes('delivery') || lowerMessage.includes('shipping') || lowerMessage.includes('time')) {
+    return FALLBACK_RESPONSES.delivery;
+  }
+  if (lowerMessage.includes('price') || lowerMessage.includes('cost') || lowerMessage.includes('how much')) {
+    return FALLBACK_RESPONSES.price;
+  }
+  if (lowerMessage.includes('size') || lowerMessage.includes('fit') || lowerMessage.includes('measurement')) {
+    return FALLBACK_RESPONSES.size;
+  }
+  return FALLBACK_RESPONSES.default;
 }
 
 export async function POST(request: NextRequest) {
@@ -48,67 +57,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize ZAI
-    const zai = await getZAI();
+    // Try to use AI SDK
+    try {
+      const ZAI = (await import("z-ai-web-dev-sdk")).default;
+      const zai = await ZAI.create();
 
-    // Get or create conversation history
-    const sessionKey = sessionId || "default";
-    let history = conversationHistory.get(sessionKey);
-    
-    if (!history || history.length === 0) {
-      history = [{ role: "assistant", content: AURNIK_SYSTEM_PROMPT }];
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: "assistant", content: AURNIK_SYSTEM_PROMPT },
+          { role: "user", content: message },
+        ],
+        thinking: { type: "disabled" },
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content;
+
+      if (aiResponse) {
+        return NextResponse.json({
+          response: aiResponse,
+          sessionId: sessionId || "default",
+        });
+      }
+    } catch (aiError) {
+      console.log("AI SDK not available, using fallback");
     }
 
-    // Add user message to history
-    history.push({ role: "user", content: message });
-
-    // Keep only last 10 messages to avoid token limits
-    const messagesToSend = history.slice(-10);
-
-    // Call AI
-    const completion = await zai.chat.completions.create({
-      messages: messagesToSend.map((m) => ({
-        role: m.role as "assistant" | "user",
-        content: m.content,
-      })),
-      thinking: { type: "disabled" },
-    });
-
-    const aiResponse = completion.choices[0]?.message?.content;
-
-    if (!aiResponse) {
-      return NextResponse.json(
-        { error: "No response from AI" },
-        { status: 500 }
-      );
-    }
-
-    // Add AI response to history
-    history.push({ role: "assistant", content: aiResponse });
-    conversationHistory.set(sessionKey, history);
-
-    return NextResponse.json({ 
-      response: aiResponse,
-      sessionId: sessionKey,
+    // Fallback response
+    return NextResponse.json({
+      response: getFallbackResponse(message),
+      sessionId: sessionId || "default",
     });
   } catch (error) {
     console.error("Chat API error:", error);
-    
-    // Return a helpful fallback response
-    return NextResponse.json({ 
-      response: "I'd be happy to help! For immediate assistance, please contact our WhatsApp liaison at +8801744688077 or browse our collection. Is there something specific about our handmade dresses or organic products I can help you with?",
+    return NextResponse.json({
+      response: FALLBACK_RESPONSES.default,
       sessionId: "fallback",
     });
   }
-}
-
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("sessionId");
-  
-  if (sessionId) {
-    conversationHistory.delete(sessionId);
-  }
-  
-  return NextResponse.json({ success: true });
 }
