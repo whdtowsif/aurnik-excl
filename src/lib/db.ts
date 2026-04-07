@@ -18,7 +18,8 @@ function createPrismaClient() {
       authToken: process.env.TURSO_AUTH_TOKEN,
     })
     
-    const adapter = new PrismaLibSql(libsql)
+    // Type cast needed due to Prisma adapter type mismatch
+    const adapter = new PrismaLibSql(libsql as any)
     
     return new PrismaClient({
       adapter,

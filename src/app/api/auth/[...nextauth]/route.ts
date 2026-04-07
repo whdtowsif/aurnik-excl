@@ -81,9 +81,9 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account, profile }) {
       // Initial sign in
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
+        token.id = user.id || "";
+        token.email = user.email || undefined;
+        token.name = user.name || undefined;
       }
       console.log("JWT callback:", { id: token.id, email: token.email });
       return token;
