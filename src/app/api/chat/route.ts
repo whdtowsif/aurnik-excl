@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import ZAI from "z-ai-web-dev-sdk";
 
 export const maxDuration = 30;
+
+// Initialize ZAI instance once
+let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
+
+async function getZAI() {
+  if (!zaiInstance) {
+    zaiInstance = await ZAI.create();
+  }
+  return zaiInstance;
+}
 
 // Aurnik Concierge System Prompt
 const AURNIK_SYSTEM_PROMPT = `You are the "Aurnik Concierge," the high-end digital ambassador for Aurnik, a premium Bangladeshi brand specializing in handmade limited-edition dresses and organic luxury goods.
@@ -59,8 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Try to use AI SDK
     try {
-      const ZAI = (await import("z-ai-web-dev-sdk")).default;
-      const zai = await ZAI.create();
+      const zai = await getZAI();
 
       const completion = await zai.chat.completions.create({
         messages: [
@@ -79,7 +89,7 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (aiError) {
-      console.log("AI SDK not available, using fallback");
+      console.error("AI SDK error:", aiError);
     }
 
     // Fallback response

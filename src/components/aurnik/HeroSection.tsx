@@ -41,70 +41,94 @@ export default function HeroSection() {
       {/* Grain texture overlay */}
       <div className="absolute inset-0 texture-grain pointer-events-none" />
 
-      {/* LEFT HALF CIRCLE - Fixed Position on Left Edge */}
+      {/* LEFT HALF CIRCLE - Absolute Position on Left Edge */}
       <motion.div
         initial={{ opacity: 0, x: -100 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3, duration: 0.8 }}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-20 hidden lg:block"
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 hidden lg:block"
       >
         <Link href="#collection" className="group block">
-          <div className="relative w-20 h-40 xl:w-24 xl:h-48">
-            {/* Half circle shape */}
-            <div className="absolute inset-0 bg-gradient-to-l from-gold-500/30 via-gold-500/20 to-gold-500/10 rounded-r-full border-r-2 border-y-2 border-gold-500/40 group-hover:border-gold-400 transition-all duration-300" />
+          <div className="relative w-16 h-32 xl:w-20 xl:h-40">
+            {/* Half circle shape using clip-path */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-l from-gold-500/40 via-gold-500/25 to-transparent border-r-2 border-gold-500/50 group-hover:border-gold-400 transition-all duration-300"
+              style={{ 
+                clipPath: 'ellipse(100% 50% at 100% 50%)',
+                background: 'linear-gradient(to left, rgba(197,160,89,0.4), rgba(197,160,89,0.2), transparent)'
+              }}
+            />
             
             {/* Glow on hover */}
-            <div className="absolute inset-0 bg-gold-500/20 rounded-r-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div 
+              className="absolute inset-0 bg-gold-500/30 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ clipPath: 'ellipse(100% 50% at 100% 50%)' }}
+            />
+            
+            {/* Inner circle accent */}
+            <div 
+              className="absolute top-1/2 left-4 -translate-y-1/2 w-1 h-16 bg-gradient-to-b from-transparent via-gold-400/60 to-transparent opacity-60 group-hover:opacity-100 transition-opacity"
+            />
             
             {/* Vertical Text */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <span 
-                  className="text-gold-300 font-serif text-sm xl:text-base tracking-[0.2em] uppercase group-hover:text-gold-200 transition-colors"
-                  style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-                >
-                  ARTISANAL
-                </span>
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center pl-1">
+              <span 
+                className="text-gold-300 font-serif text-xs xl:text-sm tracking-[0.15em] uppercase group-hover:text-gold-200 transition-colors"
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+              >
+                ARTISANAL
+              </span>
             </div>
             
             {/* Decorative dots */}
-            <div className="absolute top-3 right-2 w-1.5 h-1.5 rounded-full bg-gold-400/60 group-hover:bg-gold-400 transition-colors" />
-            <div className="absolute bottom-3 right-2 w-1.5 h-1.5 rounded-full bg-gold-400/60 group-hover:bg-gold-400 transition-colors" />
+            <div className="absolute top-4 right-1 w-1.5 h-1.5 rounded-full bg-gold-400/70 group-hover:bg-gold-400 transition-colors shadow-sm shadow-gold-400/50" />
+            <div className="absolute bottom-4 right-1 w-1.5 h-1.5 rounded-full bg-gold-400/70 group-hover:bg-gold-400 transition-colors shadow-sm shadow-gold-400/50" />
           </div>
         </Link>
       </motion.div>
 
-      {/* RIGHT HALF CIRCLE - Fixed Position on Right Edge */}
+      {/* RIGHT HALF CIRCLE - Absolute Position on Right Edge */}
       <motion.div
         initial={{ opacity: 0, x: 100 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3, duration: 0.8 }}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-20 hidden lg:block"
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 hidden lg:block"
       >
         <Link href="#organic" className="group block">
-          <div className="relative w-20 h-40 xl:w-24 xl:h-48">
-            {/* Half circle shape */}
-            <div className="absolute inset-0 bg-gradient-to-r from-gold-500/30 via-gold-500/20 to-gold-500/10 rounded-l-full border-l-2 border-y-2 border-gold-500/40 group-hover:border-gold-400 transition-all duration-300" />
+          <div className="relative w-16 h-32 xl:w-20 xl:h-40">
+            {/* Half circle shape using clip-path */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-gold-500/40 via-gold-500/25 to-transparent border-l-2 border-gold-500/50 group-hover:border-gold-400 transition-all duration-300"
+              style={{ 
+                clipPath: 'ellipse(100% 50% at 0% 50%)',
+                background: 'linear-gradient(to right, rgba(197,160,89,0.4), rgba(197,160,89,0.2), transparent)'
+              }}
+            />
             
             {/* Glow on hover */}
-            <div className="absolute inset-0 bg-gold-500/20 rounded-l-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div 
+              className="absolute inset-0 bg-gold-500/30 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ clipPath: 'ellipse(100% 50% at 0% 50%)' }}
+            />
+            
+            {/* Inner circle accent */}
+            <div 
+              className="absolute top-1/2 right-4 -translate-y-1/2 w-1 h-16 bg-gradient-to-b from-transparent via-gold-400/60 to-transparent opacity-60 group-hover:opacity-100 transition-opacity"
+            />
             
             {/* Vertical Text */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <span 
-                  className="text-gold-300 font-serif text-sm xl:text-base tracking-[0.2em] uppercase group-hover:text-gold-200 transition-colors"
-                  style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
-                >
-                  ORGANIC
-                </span>
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center pr-1">
+              <span 
+                className="text-gold-300 font-serif text-xs xl:text-sm tracking-[0.15em] uppercase group-hover:text-gold-200 transition-colors"
+                style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
+              >
+                ORGANIC
+              </span>
             </div>
             
             {/* Decorative dots */}
-            <div className="absolute top-3 left-2 w-1.5 h-1.5 rounded-full bg-gold-400/60 group-hover:bg-gold-400 transition-colors" />
-            <div className="absolute bottom-3 left-2 w-1.5 h-1.5 rounded-full bg-gold-400/60 group-hover:bg-gold-400 transition-colors" />
+            <div className="absolute top-4 left-1 w-1.5 h-1.5 rounded-full bg-gold-400/70 group-hover:bg-gold-400 transition-colors shadow-sm shadow-gold-400/50" />
+            <div className="absolute bottom-4 left-1 w-1.5 h-1.5 rounded-full bg-gold-400/70 group-hover:bg-gold-400 transition-colors shadow-sm shadow-gold-400/50" />
           </div>
         </Link>
       </motion.div>
