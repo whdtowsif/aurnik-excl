@@ -1,13 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+export const maxDuration = 10;
+
 export async function GET() {
   try {
     const products = await db.product.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        basePrice: true,
+        description: true,
+        category: true,
+        imageUrl: true,
+        isLimited: true,
+        totalAllocation: true,
+        remainingStock: true,
+        arModelUrl: true,
+        arEnabled: true,
+        featured: true,
+        fabricOptions: true,
+        createdAt: true,
         reviews: {
           where: { isApproved: true },
+          select: {
+            id: true,
+            authorName: true,
+            content: true,
+            rating: true,
+            source: true,
+            isPinned: true,
+          },
           orderBy: { isPinned: "desc" },
         },
       },
@@ -17,7 +41,7 @@ export async function GET() {
   } catch (error) {
     console.error("Failed to fetch products:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products" },
+      { error: "Failed to fetch products", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }
@@ -49,7 +73,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Failed to create product:", error);
     return NextResponse.json(
-      { error: "Failed to create product" },
+      { error: "Failed to create product", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }
